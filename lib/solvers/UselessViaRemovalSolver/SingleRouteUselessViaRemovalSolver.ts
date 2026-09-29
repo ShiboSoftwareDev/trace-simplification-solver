@@ -4,6 +4,7 @@ import { HighDensityRouteSpatialIndex } from "../../data-structures/HighDensityR
 import { ObstacleSpatialHashIndex } from "../../data-structures/ObstacleTree"
 import type { HighDensityRoute } from "../../types/high-density-types"
 import { calculate45DegreePaths } from "../../utils/calculate45DegreePaths"
+import { getVectorLength } from "../../utils/getVectorLength"
 import { doesSegmentCrossPolygonBoundary } from "../../utils/polygonContainment"
 import { BaseSolver } from "../BaseSolver"
 import { breakRouteIntoSections } from "./break-route-into-sections"
@@ -100,7 +101,7 @@ export class SingleRouteUselessViaRemovalSolver extends BaseSolver {
   private getPathLength(points: RoutePoint[]): number {
     let length = 0
     for (let index = 1; index < points.length; index++) {
-      length += Math.hypot(
+      length += getVectorLength(
         points[index].x - points[index - 1].x,
         points[index].y - points[index - 1].y,
       )
@@ -181,7 +182,7 @@ export class SingleRouteUselessViaRemovalSolver extends BaseSolver {
     const addPath = (points: Array<{ x: number; y: number }>) => {
       let pathLength = 0
       for (let index = 1; index < points.length; index++) {
-        pathLength += Math.hypot(
+        pathLength += getVectorLength(
           points[index].x - points[index - 1].x,
           points[index].y - points[index - 1].y,
         )
