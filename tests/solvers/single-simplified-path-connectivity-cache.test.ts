@@ -13,7 +13,7 @@ class CountingConnectivityMap extends ConnectivityMap {
   }
 }
 
-test("caches repeated connectivity checks while preparing one route", () => {
+test("shares connectivity lookups between path solvers", () => {
   const inputRoute: HighDensityRoute = {
     connectionName: "signal",
     traceThickness: 0.1,
@@ -51,15 +51,30 @@ test("caches repeated connectivity checks while preparing one route", () => {
     peer_net: ["peer", "peer_alias"],
   })
 
-  const solver = new SingleSimplifiedPathSolver5({
+  const netConnectedToIdByConnectivityId = {}
+  const firstSolver = new SingleSimplifiedPathSolver5({
     inputRoute,
     otherHdRoutes: peerRoutes,
     obstacles,
     connMap,
     colorMap: {},
+    netConnectedToIdByConnectivityId,
   })
 
-  expect(solver.filteredObstacles).toHaveLength(100)
-  expect(solver.filteredObstaclePathSegments).toHaveLength(100)
-  expect(connMap.lookupCount).toBe(4)
+  expect(firstSolver.filteredObstacles).toHaveLength(100)
+  expect(firstSolver.filteredObstaclePathSegments).toHaveLength(100)
+  expect(connMap.lookupCount).toBe(3)
+
+  const secondSolver = new SingleSimplifiedPathSolver5({
+    inputRoute,
+    otherHdRoutes: peerRoutes,
+    obstacles,
+    connMap,
+    colorMap: {},
+    netConnectedToIdByConnectivityId,
+  })
+
+  expect(secondSolver.filteredObstacles).toHaveLength(100)
+  expect(secondSolver.filteredObstaclePathSegments).toHaveLength(100)
+  expect(connMap.lookupCount).toBe(3)
 })

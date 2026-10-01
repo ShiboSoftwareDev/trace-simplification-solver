@@ -28,6 +28,7 @@ interface Point {
 }
 
 type ConnectionId = HighDensityIntraNodeRoute["connectionName"]
+type ConnectivityId = string
 
 interface PathSegment {
   start: Point
@@ -76,17 +77,35 @@ export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
   private clearanceTraceThickness = this.TRACE_THICKNESS
   private inputRouteIds: ConnectionId[] = []
   private isConnectedToInputRouteById = new Map<ConnectionId, boolean>()
+  private netConnectedToIdByConnectivityId: Record<
+    ConnectivityId,
+    string | undefined
+  >
 
   TAIL_JUMP_RATIO: number = 0.8
+
+  private getNetConnectedToId(connectivityId: ConnectivityId) {
+    if (connectivityId in this.netConnectedToIdByConnectivityId) {
+      return this.netConnectedToIdByConnectivityId[connectivityId]
+    }
+    const netId = this.connMap.getNetConnectedToId(connectivityId)
+    this.netConnectedToIdByConnectivityId[connectivityId] = netId
+    return netId
+  }
 
   private isConnectedToInputRoute(connectionId: ConnectionId): boolean {
     const cached = this.isConnectedToInputRouteById.get(connectionId)
     if (cached !== undefined) return cached
-    const connected = this.inputRouteIds.some(
-      (inputRouteId) =>
-        inputRouteId === connectionId ||
-        this.connMap.areIdsConnected(inputRouteId, connectionId),
-    )
+    const connected = this.inputRouteIds.some((inputRouteId) => {
+      if (inputRouteId === connectionId) return true
+      const inputRouteNetId = this.getNetConnectedToId(inputRouteId)
+      if (!inputRouteNetId) return false
+      const connectionNetId = this.getNetConnectedToId(connectionId)
+      if (!connectionNetId) return false
+      return (
+        inputRouteNetId === connectionNetId || connectionNetId === inputRouteId
+      )
+    })
     this.isConnectedToInputRouteById.set(connectionId, connected)
     return connected
   }
@@ -105,6 +124,10 @@ export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
   constructor(
     params: ConstructorParameters<typeof SingleSimplifiedPathSolver>[0] & {
       useTraceWidthAwareClearance?: boolean
+      netConnectedToIdByConnectivityId?: Record<
+        ConnectivityId,
+        string | undefined
+      >
     },
   ) {
     super(params)
@@ -115,6 +138,8 @@ export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
     ].filter(
       (connectionId): connectionId is string => connectionId !== undefined,
     )
+    this.netConnectedToIdByConnectivityId =
+      params.netConnectedToIdByConnectivityId ?? {}
     this.cachedValidPathSegments = new Set()
     this.useTraceWidthAwareClearance =
       params.useTraceWidthAwareClearance ?? false
