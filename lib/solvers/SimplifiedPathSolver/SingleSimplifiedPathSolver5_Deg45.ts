@@ -190,21 +190,14 @@ export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
     }
 
     this.filteredObstacles = this.obstacles.filter((obstacle) => {
-      if (
-        obstacle.connectedTo.some((connectionId) =>
-          this.isConnectedToInputRoute(connectionId),
-        )
-      ) {
+      const distance = computeGapBetweenBoxes(boundsBox, obstacle)
+      if (distance >= this.OBSTACLE_MARGIN + this.clearanceTraceThickness / 2) {
         return false
       }
 
-      const distance = computeGapBetweenBoxes(boundsBox, obstacle)
-
-      if (distance < this.OBSTACLE_MARGIN + this.clearanceTraceThickness / 2) {
-        return true
-      }
-
-      return false
+      return !obstacle.connectedTo.some((connectionId) =>
+        this.isConnectedToInputRoute(connectionId),
+      )
     })
 
     this.filteredObstaclePathSegments = this.otherHdRoutes.flatMap(
