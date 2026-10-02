@@ -38,6 +38,42 @@ interface PathSegment {
   endDistance: number
 }
 
+type BoundsBox = {
+  center: { x: number; y: number }
+  width: number
+  height: number
+}
+
+const segmentBoundsByRoute = new WeakMap<
+  HighDensityIntraNodeRoute,
+  BoundsBox
+>()
+
+function getRouteSegmentBounds(route: HighDensityIntraNodeRoute): BoundsBox {
+  const cached = segmentBoundsByRoute.get(route)
+  if (cached) return cached
+  const bounds = route.route.reduce(
+    (acc, point) => {
+      acc.minX = Math.min(acc.minX, point.x)
+      acc.maxX = Math.max(acc.maxX, point.x)
+      acc.minY = Math.min(acc.minY, point.y)
+      acc.maxY = Math.max(acc.maxY, point.y)
+      return acc
+    },
+    { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity },
+  )
+  const result = {
+    center: {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
+    },
+    width: bounds.maxX - bounds.minX,
+    height: bounds.maxY - bounds.minY,
+  }
+  segmentBoundsByRoute.set(route, result)
+  return result
+}
+
 export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
   private pathSegments: PathSegment[] = []
   private totalPathLength: number = 0
@@ -203,6 +239,13 @@ export class SingleSimplifiedPathSolver5 extends SingleSimplifiedPathSolver {
     this.filteredObstaclePathSegments = this.otherHdRoutes.flatMap(
       (hdRoute) => {
         if (this.isSameNetRoute(hdRoute)) {
+          return []
+        }
+
+        if (
+          computeGapBetweenBoxes(boundsBox, getRouteSegmentBounds(hdRoute)) >
+          routeSegmentMargin
+        ) {
           return []
         }
 
